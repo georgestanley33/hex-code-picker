@@ -270,11 +270,6 @@
     #more-codes.open { display: block; }
 
     /* Coords */
-    #coords-display {
-      font-size: 0.9rem;
-      color: var(--text);
-      margin-top: 1rem;
-    }
 
     /* History */
     #history-grid {
@@ -452,7 +447,6 @@
           </div>
         </div>
       </div>
-      <div id="coords-display">x: <span id="cx">—</span> &nbsp; y: <span id="cy">—</span></div>
     </div>
 
     <!-- History -->
@@ -490,8 +484,6 @@
   const swatch      = document.getElementById('color-swatch');
   const valHex      = document.getElementById('val-hex');
   const valRgb      = document.getElementById('val-rgb');
-  const cxEl        = document.getElementById('cx');
-  const cyEl        = document.getElementById('cy');
   const histGrid    = document.getElementById('history-grid');
   const toast       = document.getElementById('toast');
 
@@ -558,8 +550,6 @@
     valHex.textContent = '#------';
     valRgb.textContent = '---, ---, ---';
     ['val-hsl','val-hsb','val-cmyk','val-css','val-oklch'].forEach(id => document.getElementById(id).textContent = '—');
-    document.getElementById('cx').textContent = '—';
-    document.getElementById('cy').textContent = '—';
   });
   fileInput.addEventListener('change', e => loadFile(e.target.files[0]));
 
@@ -677,8 +667,6 @@
     if (px < 0 || py < 0 || px >= mainCanvas.width || py >= mainCanvas.height) return;
 
     const { r, g, b, a } = getPixelColor(px, py);
-    cxEl.textContent = px;
-    cyEl.textContent = py;
     updateSidebar(r, g, b, a);
     drawMagnifier(e.clientX, e.clientY, px, py);
   });
