@@ -425,26 +425,22 @@
       <button id="more-codes-toggle">View all codes ▾</button>
       <div id="more-codes">
         <div class="color-values" style="margin-top: 0.8rem;">
-          <div class="value-row">
-            <span class="value-key">HSL</span>
-            <span class="value-val" id="val-hsl" title="Click to copy">—</span>
-          </div>
-          <div class="value-row">
-            <span class="value-key">HSB</span>
-            <span class="value-val" id="val-hsb" title="Click to copy">—</span>
-          </div>
-          <div class="value-row">
-            <span class="value-key">CMYK</span>
-            <span class="value-val" id="val-cmyk" title="Click to copy">—</span>
-          </div>
-          <div class="value-row">
-            <span class="value-key">CSS</span>
-            <span class="value-val" id="val-css" title="Click to copy">—</span>
-          </div>
-          <div class="value-row">
-            <span class="value-key">oklch</span>
-            <span class="value-val" id="val-oklch" title="Click to copy">—</span>
-          </div>
+          <div class="value-row"><span class="value-key">HSL</span><span class="value-val" id="val-hsl" title="Click to copy">—</span></div>
+          <div class="value-row"><span class="value-key">HSB</span><span class="value-val" id="val-hsb" title="Click to copy">—</span></div>
+          <div class="value-row"><span class="value-key">HWB</span><span class="value-val" id="val-hwb" title="Click to copy">—</span></div>
+          <div class="value-row"><span class="value-key">CMYK</span><span class="value-val" id="val-cmyk" title="Click to copy">—</span></div>
+          <div class="value-row"><span class="value-key">LAB</span><span class="value-val" id="val-lab" title="Click to copy">—</span></div>
+          <div class="value-row"><span class="value-key">LCH</span><span class="value-val" id="val-lch" title="Click to copy">—</span></div>
+          <div class="value-row"><span class="value-key">XYZ</span><span class="value-val" id="val-xyz" title="Click to copy">—</span></div>
+          <div class="value-row"><span class="value-key">oklab</span><span class="value-val" id="val-oklab" title="Click to copy">—</span></div>
+          <div class="value-row"><span class="value-key">oklch</span><span class="value-val" id="val-oklch" title="Click to copy">—</span></div>
+          <div class="value-row"><span class="value-key">CSS rgb()</span><span class="value-val" id="val-css" title="Click to copy">—</span></div>
+          <div class="value-row"><span class="value-key">CSS hsl()</span><span class="value-val" id="val-csshsl" title="Click to copy">—</span></div>
+          <div class="value-row"><span class="value-key">CSS hwb()</span><span class="value-val" id="val-csshwb" title="Click to copy">—</span></div>
+          <div class="value-row"><span class="value-key">Float RGB</span><span class="value-val" id="val-float" title="Click to copy">—</span></div>
+          <div class="value-row"><span class="value-key">Android</span><span class="value-val" id="val-android" title="Click to copy">—</span></div>
+          <div class="value-row"><span class="value-key">Decimal</span><span class="value-val" id="val-decimal" title="Click to copy">—</span></div>
+          <div class="value-row"><span class="value-key">CSS Var</span><span class="value-val" id="val-cssvar" title="Click to copy">—</span></div>
         </div>
       </div>
     </div>
@@ -549,7 +545,7 @@
     swatch.style.background = '#1e1e2e';
     valHex.textContent = '#------';
     valRgb.textContent = '---, ---, ---';
-    ['val-hsl','val-hsb','val-cmyk','val-css','val-oklch'].forEach(id => document.getElementById(id).textContent = '—');
+    ['val-hsl','val-hsb','val-hwb','val-cmyk','val-lab','val-lch','val-xyz','val-oklab','val-oklch','val-css','val-csshsl','val-csshwb','val-float','val-android','val-decimal','val-cssvar'].forEach(id => document.getElementById(id).textContent = '—');
   });
   fileInput.addEventListener('change', e => loadFile(e.target.files[0]));
 
@@ -615,33 +611,95 @@
     };
   }
 
-  function rgbToOklch(r, g, b) {
-    // sRGB -> linear
-    const lin = v => { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
-    const lr = lin(r), lg = lin(g), lb = lin(b);
-    // linear sRGB -> OKLab
+  function linearize(v) {
+    v /= 255;
+    return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  }
+
+  function rgbToXyz(r, g, b) {
+    const lr = linearize(r), lg = linearize(g), lb = linearize(b);
+    return {
+      x: (lr*0.4124564 + lg*0.3575761 + lb*0.1804375) * 100,
+      y: (lr*0.2126729 + lg*0.7151522 + lb*0.0721750) * 100,
+      z: (lr*0.0193339 + lg*0.1191920 + lb*0.9503041) * 100
+    };
+  }
+
+  function rgbToLab(r, g, b) {
+    const { x, y, z } = rgbToXyz(r, g, b);
+    const f = v => { v /= 100; return v > 0.008856 ? Math.cbrt(v) : 7.787*v + 16/116; };
+    const fx = f(x / 95.047), fy = f(y / 100), fz = f(z / 108.883);
+    return {
+      l: (116*fy - 16).toFixed(1),
+      a: (500*(fx - fy)).toFixed(1),
+      b: (200*(fy - fz)).toFixed(1)
+    };
+  }
+
+  function rgbToLch(r, g, b) {
+    const lab = rgbToLab(r, g, b);
+    const C = Math.sqrt(lab.a**2 + lab.b**2);
+    let H = Math.atan2(parseFloat(lab.b), parseFloat(lab.a)) * 180 / Math.PI;
+    if (H < 0) H += 360;
+    return { l: lab.l, c: C.toFixed(1), h: Math.round(H) };
+  }
+
+  function rgbToOklab(r, g, b) {
+    const lr = linearize(r), lg = linearize(g), lb = linearize(b);
     const l = Math.cbrt(0.4122214708*lr + 0.5363325363*lg + 0.0514459929*lb);
     const m = Math.cbrt(0.2119034982*lr + 0.6806995451*lg + 0.1073969566*lb);
     const s = Math.cbrt(0.0883024619*lr + 0.2817188376*lg + 0.6299787005*lb);
-    const L = 0.2104542553*l + 0.7936177850*m - 0.0040720468*s;
-    const a = 1.9779984951*l - 2.4285922050*m + 0.4505937099*s;
-    const bv = 0.0259040371*l + 0.7827717662*m - 0.8086757660*s;
-    const C = Math.sqrt(a*a + bv*bv);
-    let H = Math.atan2(bv, a) * 180 / Math.PI;
+    return {
+      l: (0.2104542553*l + 0.7936177850*m - 0.0040720468*s).toFixed(3),
+      a: (1.9779984951*l - 2.4285922050*m + 0.4505937099*s).toFixed(3),
+      b: (0.0259040371*l + 0.7827717662*m - 0.8086757660*s).toFixed(3)
+    };
+  }
+
+  function rgbToOklch(r, g, b) {
+    const ok = rgbToOklab(r, g, b);
+    const C = Math.sqrt(ok.a**2 + ok.b**2);
+    let H = Math.atan2(parseFloat(ok.b), parseFloat(ok.a)) * 180 / Math.PI;
     if (H < 0) H += 360;
-    return { l: (L * 100).toFixed(1), c: C.toFixed(3), h: Math.round(H) };
+    return { l: (parseFloat(ok.l) * 100).toFixed(1), c: C.toFixed(3), h: Math.round(H) };
+  }
+
+  function rgbToHwb(r, g, b) {
+    const w = Math.min(r, g, b) / 255 * 100;
+    const bl = (1 - Math.max(r, g, b) / 255) * 100;
+    const { h } = rgbToHsl(r, g, b);
+    return { h, w: Math.round(w), b: Math.round(bl) };
   }
 
   function updateMoreCodes(r, g, b) {
     const hsl  = rgbToHsl(r, g, b);
     const hsb  = rgbToHsb(r, g, b);
+    const hwb  = rgbToHwb(r, g, b);
     const cmyk = rgbToCmyk(r, g, b);
-    const lch  = rgbToOklch(r, g, b);
-    document.getElementById('val-hsl').textContent  = `${hsl.h}°, ${hsl.s}%, ${hsl.l}%`;
-    document.getElementById('val-hsb').textContent  = `${hsb.h}°, ${hsb.s}%, ${hsb.b}%`;
-    document.getElementById('val-cmyk').textContent = `${cmyk.c}%, ${cmyk.m}%, ${cmyk.y}%, ${cmyk.k}%`;
-    document.getElementById('val-css').textContent  = `rgb(${r}, ${g}, ${b})`;
-    document.getElementById('val-oklch').textContent = `${lch.l}% ${lch.c} ${lch.h}°`;
+    const lab  = rgbToLab(r, g, b);
+    const lch  = rgbToLch(r, g, b);
+    const xyz  = rgbToXyz(r, g, b);
+    const ok   = rgbToOklab(r, g, b);
+    const oklch = rgbToOklch(r, g, b);
+    const fr = (r/255).toFixed(3), fg = (g/255).toFixed(3), fb = (b/255).toFixed(3);
+    const hex = rgbToHex(r, g, b);
+
+    document.getElementById('val-hsl').textContent    = `${hsl.h}°, ${hsl.s}%, ${hsl.l}%`;
+    document.getElementById('val-hsb').textContent    = `${hsb.h}°, ${hsb.s}%, ${hsb.b}%`;
+    document.getElementById('val-hwb').textContent    = `${hwb.h}°, ${hwb.w}%, ${hwb.b}%`;
+    document.getElementById('val-cmyk').textContent   = `${cmyk.c}%, ${cmyk.m}%, ${cmyk.y}%, ${cmyk.k}%`;
+    document.getElementById('val-lab').textContent    = `${lab.l}, ${lab.a}, ${lab.b}`;
+    document.getElementById('val-lch').textContent    = `${lch.l}, ${lch.c}, ${lch.h}°`;
+    document.getElementById('val-xyz').textContent    = `${xyz.x.toFixed(2)}, ${xyz.y.toFixed(2)}, ${xyz.z.toFixed(2)}`;
+    document.getElementById('val-oklab').textContent  = `${ok.l}, ${ok.a}, ${ok.b}`;
+    document.getElementById('val-oklch').textContent  = `${oklch.l}% ${oklch.c} ${oklch.h}°`;
+    document.getElementById('val-css').textContent    = `rgb(${r}, ${g}, ${b})`;
+    document.getElementById('val-csshsl').textContent = `hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`;
+    document.getElementById('val-csshwb').textContent = `hwb(${hwb.h} ${hwb.w}% ${hwb.b}%)`;
+    document.getElementById('val-float').textContent  = `${fr}, ${fg}, ${fb}`;
+    document.getElementById('val-android').textContent = `0xFF${hex.slice(1)}`;
+    document.getElementById('val-decimal').textContent = `${(r << 16 | g << 8 | b) >>> 0}`;
+    document.getElementById('val-cssvar').textContent  = `--color: ${hex}`;
   }
 
   function updateSidebar(r, g, b, a) {
@@ -758,7 +816,7 @@
     navigator.clipboard.writeText(text).catch(() => {});
   }
 
-  [valHex, valRgb, ...['val-hsl','val-hsb','val-cmyk','val-css','val-oklch'].map(id => document.getElementById(id))].forEach(el => {
+  [valHex, valRgb, ...['val-hsl','val-hsb','val-hwb','val-cmyk','val-lab','val-lch','val-xyz','val-oklab','val-oklch','val-css','val-csshsl','val-csshwb','val-float','val-android','val-decimal','val-cssvar'].map(id => document.getElementById(id))].forEach(el => {
     el.addEventListener('click', () => {
       if (!currentHex) return;
       const text = el.textContent;
