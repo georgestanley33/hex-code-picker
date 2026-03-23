@@ -193,6 +193,7 @@
       gap: 0;
       overflow-y: auto;
       background: var(--bg);
+      justify-content: space-between;
     }
 
     .panel {
@@ -390,11 +391,7 @@
       <button id="clear-history">clear all</button>
     </div>
 
-    <!-- Actions -->
-    <div class="panel">
-      <div class="panel-label">Actions</div>
-      <button class="action-btn primary" id="copy-hex-btn">Copy HEX</button>
-      <button class="action-btn" id="copy-all-btn">Copy RGB + HEX + HSL</button>
+    <div class="panel" style="margin-top: auto;">
       <button class="action-btn" id="new-image-btn">Load new image</button>
     </div>
   </aside>
@@ -624,18 +621,6 @@
     });
   });
 
-  document.getElementById('copy-hex-btn').addEventListener('click', () => {
-    if (!currentHex) return;
-    copyToClipboard(currentHex);
-    showToast('Copied ' + currentHex);
-  });
-
-  document.getElementById('copy-all-btn').addEventListener('click', () => {
-    if (!currentHex) return;
-    const text = `HEX: ${currentHex}\nRGB: ${currentRgb}\nHSL: ${currentHsl}`;
-    copyToClipboard(text);
-    showToast('All values copied!');
-  });
 
   /* ── Toast ── */
   let toastTimer;
