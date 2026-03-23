@@ -133,6 +133,12 @@
       transition: border-color 0.2s, color 0.2s;
     }
     .drop-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .drop-formats {
+      color: var(--text);
+      font-size: 1rem;
+      font-family: 'Space Mono', monospace;
+      letter-spacing: 0.08em;
+    }
 
     /* Canvas wrapper */
     #canvas-wrap {
@@ -343,6 +349,7 @@
       <div class="drop-icon">⬆</div>
       <p class="drop-label"><strong>Drop an image here</strong><br>or click to browse</p>
       <button class="drop-btn" id="browse-btn">Browse files</button>
+      <p class="drop-formats">PNG · JPG · GIF · WebP · BMP · SVG</p>
     </div>
 
     <div id="canvas-wrap">
