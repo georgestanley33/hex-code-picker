@@ -363,6 +363,29 @@
 
   <!-- Sidebar -->
   <aside id="sidebar">
+    <!-- Image Details -->
+    <div class="panel" id="image-details-panel">
+      <div class="panel-label">Image Details</div>
+      <div class="color-values">
+        <div class="value-row">
+          <span class="value-key">File</span>
+          <span class="value-val" id="img-filename" style="cursor:default;">—</span>
+        </div>
+        <div class="value-row">
+          <span class="value-key">Size</span>
+          <span class="value-val" id="img-filesize" style="cursor:default;">—</span>
+        </div>
+        <div class="value-row">
+          <span class="value-key">Dimensions</span>
+          <span class="value-val" id="img-dimensions" style="cursor:default;">—</span>
+        </div>
+        <div class="value-row">
+          <span class="value-key">Type</span>
+          <span class="value-val" id="img-type" style="cursor:default;">—</span>
+        </div>
+      </div>
+    </div>
+
     <!-- Live color -->
     <div class="panel">
       <div class="panel-label">Live Colour</div>
@@ -438,6 +461,12 @@
   let imageLoaded = false;
 
   /* ── File loading ── */
+  function formatBytes(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
   function loadFile(file) {
     if (!file || !file.type.startsWith('image/')) return;
     const fd = new FormData();
@@ -454,6 +483,11 @@
           dropZone.classList.add('hidden');
           canvasWrap.classList.add('visible');
           imageLoaded = true;
+
+          document.getElementById('img-filename').textContent  = file.name;
+          document.getElementById('img-filesize').textContent  = formatBytes(file.size);
+          document.getElementById('img-dimensions').textContent = `${img.naturalWidth} × ${img.naturalHeight}`;
+          document.getElementById('img-type').textContent      = file.type.replace('image/', '').toUpperCase();
         };
         img.src = data.image;
       })
