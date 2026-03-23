@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PixelPick</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0a0a0f;
+      --surface:  #111118;
+      --border:   #1e1e2e;
+      --accent:   #b8ff57;
+      --accent2:  #57c8ff;
+      --text:     #e8e8f0;
+      --muted:    #555570;
+      --radius:   6px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.2rem 2rem;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(10,10,15,0.85);
+      backdrop-filter: blur(12px);
+    }
+    .logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.4rem;
+      letter-spacing: -0.03em;
+    }
+    .logo span { color: var(--accent); }
+    .badge {
+      font-size: 0.65rem;
+      background: var(--border);
+      color: var(--muted);
+      padding: 0.25rem 0.6rem;
+      border-radius: 99px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    /* ── Layout ── */
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      gap: 0;
+      height: calc(100vh - 61px);
+    }
+
+    /* ── Canvas Area ── */
+    #canvas-area {
+      position: relative;
+      overflow: hidden;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Drop zone */
+    #drop-zone {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    #drop-zone.drag-over { background: rgba(184,255,87,0.04); }
+    #drop-zone.hidden { display: none; }
+
+    .drop-icon {
+      width: 64px;
+      height: 64px;
+      border: 2px dashed var(--muted);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      color: var(--muted);
+      transition: border-color 0.2s, color 0.2s;
+    }
+    #drop-zone:hover .drop-icon,
+    #drop-zone.drag-over .drop-icon {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .drop-label {
+      color: var(--muted);
+      font-size: 0.75rem;
+      text-align: center;
+      line-height: 1.8;
+    }
+    .drop-label strong { color: var(--text); }
+    .drop-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      font-size: 0.72rem;
+      padding: 0.5rem 1.2rem;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .drop-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Canvas wrapper */
+    #canvas-wrap {
+      display: none;
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      align-items: center;
+      justify-content: center;
+    }
+    #canvas-wrap.visible { display: flex; }
+
+    #main-canvas {
+      cursor: crosshair;
+      image-rendering: pixelated;
+      display: block;
+      max-width: none;
+    }
+
+    /* Magnifier */
+    #magnifier {
+      display: none;
+      position: fixed;
+      pointer-events: none;
+      z-index: 200;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 2px solid var(--accent);
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.5), 0 8px 32px rgba(0,0,0,0.6);
+    }
+    #magnifier canvas {
+      display: block;
+    }
+    .crosshair {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+    .crosshair::before, .crosshair::after {
+      content: '';
+      position: absolute;
+      background: rgba(255,255,255,0.6);
+    }
+    .crosshair::before { width: 1px; height: 100%; left: 50%; top: 0; }
+    .crosshair::after  { height: 1px; width: 100%; top: 50%; left: 0; }
+
+    /* ── Sidebar ── */
+    #sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      overflow-y: auto;
+      background: var(--bg);
+    }
+
+    .panel {
+      padding: 1.4rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .panel-label {
+      font-size: 0.6rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 1rem;
+    }
+
+    /* Live color display */
+    #color-swatch {
+      width: 100%;
+      height: 72px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      margin-bottom: 1rem;
+      transition: background-color 0.05s;
+      background: #1e1e2e;
+      position: relative;
+    }
+
+    .color-values { display: flex; flex-direction: column; gap: 0.5rem; }
+    .value-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .value-key {
+      font-size: 0.6rem;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .value-val {
+      font-size: 0.8rem;
+      color: var(--accent);
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .value-val:hover { opacity: 0.7; }
+    .value-val.copied { color: var(--accent2); }
+
+    /* Coords */
+    #coords-display {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 0.8rem;
+    }
+    #coords-display span { color: var(--text); }
+
+    /* History */
+    #history-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+    }
+    .swatch-item {
+      aspect-ratio: 1;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      position: relative;
+    }
+    .swatch-item:hover {
+      transform: scale(1.12);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      z-index: 2;
+    }
+    .swatch-empty {
+      background: var(--surface);
+      border: 1px dashed var(--border);
+    }
+
+    #clear-history {
+      margin-top: 0.8rem;
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      font-size: 0.65rem;
+      cursor: pointer;
+      transition: color 0.15s;
+      padding: 0;
+    }
+    #clear-history:hover { color: #ff6b6b; }
+
+    /* Actions */
+    .action-btn {
+      width: 100%;
+      padding: 0.65rem;
+      border-radius: var(--radius);
+      font-family: 'Space Mono', monospace;
+      font-size: 0.72rem;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: center;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      margin-bottom: 0.5rem;
+    }
+    .action-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .action-btn.primary {
+      background: var(--accent);
+      color: #0a0a0f;
+      border-color: var(--accent);
+      font-weight: 700;
+    }
+    .action-btn.primary:hover { background: #d4ff80; }
+
+    /* Toast */
+    #toast {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(8px);
+      background: var(--accent);
+      color: #0a0a0f;
+      font-size: 0.7rem;
+      padding: 0.5rem 1.2rem;
+      border-radius: 99px;
+      opacity: 0;
+      transition: opacity 0.2s, transform 0.2s;
+      pointer-events: none;
+      z-index: 999;
+      font-family: 'Space Mono', monospace;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    #file-input { display: none; }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Pixel<span>Pick</span></div>
+  <span class="badge">Hex Inspector</span>
+</header>
+
+<main>
+  <!-- Canvas area -->
+  <div id="canvas-area">
+    <div id="drop-zone">
+      <div class="drop-icon">⬆</div>
+      <p class="drop-label"><strong>Drop an image here</strong><br>or click to browse</p>
+      <button class="drop-btn" id="browse-btn">Browse files</button>
+    </div>
+
+    <div id="canvas-wrap">
+      <canvas id="main-canvas"></canvas>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <aside id="sidebar">
+    <!-- Live color -->
+    <div class="panel">
+      <div class="panel-label">Live Colour</div>
+      <div id="color-swatch"></div>
+      <div class="color-values">
+        <div class="value-row">
+          <span class="value-key">HEX</span>
+          <span class="value-val" id="val-hex" title="Click to copy">#------</span>
+        </div>
+        <div class="value-row">
+          <span class="value-key">RGB</span>
+          <span class="value-val" id="val-rgb" title="Click to copy">---, ---, ---</span>
+        </div>
+        <div class="value-row">
+          <span class="value-key">HSL</span>
+          <span class="value-val" id="val-hsl" title="Click to copy">---°, --%, --%</span>
+        </div>
+        <div class="value-row">
+          <span class="value-key">Alpha</span>
+          <span class="value-val" id="val-alpha">---</span>
+        </div>
+      </div>
+      <div id="coords-display">x: <span id="cx">—</span> &nbsp; y: <span id="cy">—</span></div>
+    </div>
+
+    <!-- History -->
+    <div class="panel">
+      <div class="panel-label">Picked Colours</div>
+      <div id="history-grid"></div>
+      <button id="clear-history">clear all</button>
+    </div>
+
+    <!-- Actions -->
+    <div class="panel">
+      <div class="panel-label">Actions</div>
+      <button class="action-btn primary" id="copy-hex-btn">Copy HEX</button>
+      <button class="action-btn" id="copy-all-btn">Copy RGB + HEX + HSL</button>
+      <button class="action-btn" id="new-image-btn">Load new image</button>
+    </div>
+  </aside>
+</main>
+
+<!-- Magnifier -->
+<div id="magnifier">
+  <canvas id="mag-canvas" width="120" height="120"></canvas>
+  <div class="crosshair"></div>
+</div>
+
+<div id="toast"></div>
+<input type="file" id="file-input" accept="image/*">
+
+<script>
+  const dropZone    = document.getElementById('drop-zone');
+  const canvasWrap  = document.getElementById('canvas-wrap');
+  const mainCanvas  = document.getElementById('main-canvas');
+  const ctx         = mainCanvas.getContext('2d', { willReadFrequently: true });
+  const magnifier   = document.getElementById('magnifier');
+  const magCanvas   = document.getElementById('mag-canvas');
+  const magCtx      = magCanvas.getContext('2d');
+  const fileInput   = document.getElementById('file-input');
+
+  const swatch      = document.getElementById('color-swatch');
+  const valHex      = document.getElementById('val-hex');
+  const valRgb      = document.getElementById('val-rgb');
+  const valHsl      = document.getElementById('val-hsl');
+  const valAlpha    = document.getElementById('val-alpha');
+  const cxEl        = document.getElementById('cx');
+  const cyEl        = document.getElementById('cy');
+  const histGrid    = document.getElementById('history-grid');
+  const toast       = document.getElementById('toast');
+
+  const MAG_SIZE    = 120;
+  const MAG_ZOOM    = 8;
+  const MAG_PIXELS  = Math.floor(MAG_SIZE / MAG_ZOOM); // pixels shown = 15
+  magnifier.style.width  = MAG_SIZE + 'px';
+  magnifier.style.height = MAG_SIZE + 'px';
+
+  let currentHex = null;
+  let currentRgb = null;
+  let currentHsl = null;
+  let history    = [];
+  let imageLoaded = false;
+
+  /* ── File loading ── */
+  function loadFile(file) {
+    if (!file || !file.type.startsWith('image/')) return;
+    const fd = new FormData();
+    fd.append('image', file);
+    fetch('/upload', { method: 'POST', body: fd })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) { showToast('Error: ' + data.error); return; }
+        const img = new Image();
+        img.onload = () => {
+          mainCanvas.width  = img.naturalWidth;
+          mainCanvas.height = img.naturalHeight;
+          ctx.drawImage(img, 0, 0);
+          dropZone.classList.add('hidden');
+          canvasWrap.classList.add('visible');
+          imageLoaded = true;
+        };
+        img.src = data.image;
+      })
+      .catch(() => showToast('Upload failed'));
+  }
+
+  document.getElementById('browse-btn').addEventListener('click', () => fileInput.click());
+  document.getElementById('new-image-btn').addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', e => loadFile(e.target.files[0]));
+
+  dropZone.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave',   () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    loadFile(e.dataTransfer.files[0]);
+  });
+
+  /* ── Pixel picking ── */
+  function getPixelColor(x, y) {
+    const d = ctx.getImageData(x, y, 1, 1).data;
+    return { r: d[0], g: d[1], b: d[2], a: d[3] };
+  }
+
+  function rgbToHex(r, g, b) {
+    return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('').toUpperCase();
+  }
+
+  function rgbToHsl(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h, s, l = (max + min) / 2;
+    if (max === min) { h = s = 0; }
+    else {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      switch (max) {
+        case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+        case g: h = ((b - r) / d + 2) / 6; break;
+        case b: h = ((r - g) / d + 4) / 6; break;
+      }
+    }
+    return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+  }
+
+  function updateSidebar(r, g, b, a) {
+    const hex = rgbToHex(r, g, b);
+    const hsl = rgbToHsl(r, g, b);
+    const alpha = (a / 255).toFixed(2);
+
+    currentHex = hex;
+    currentRgb = `rgb(${r}, ${g}, ${b})`;
+    currentHsl = `hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`;
+
+    swatch.style.background = hex;
+    valHex.textContent  = hex;
+    valRgb.textContent  = `${r}, ${g}, ${b}`;
+    valHsl.textContent  = `${hsl.h}°, ${hsl.s}%, ${hsl.l}%`;
+    valAlpha.textContent = alpha;
+  }
+
+  mainCanvas.addEventListener('mousemove', e => {
+    if (!imageLoaded) return;
+    const rect = mainCanvas.getBoundingClientRect();
+    const scaleX = mainCanvas.width / rect.width;
+    const scaleY = mainCanvas.height / rect.height;
+    const px = Math.floor((e.clientX - rect.left) * scaleX);
+    const py = Math.floor((e.clientY - rect.top) * scaleY);
+
+    if (px < 0 || py < 0 || px >= mainCanvas.width || py >= mainCanvas.height) return;
+
+    const { r, g, b, a } = getPixelColor(px, py);
+    cxEl.textContent = px;
+    cyEl.textContent = py;
+    updateSidebar(r, g, b, a);
+    drawMagnifier(e.clientX, e.clientY, px, py);
+  });
+
+  mainCanvas.addEventListener('mouseleave', () => {
+    magnifier.style.display = 'none';
+  });
+
+  mainCanvas.addEventListener('click', e => {
+    if (!imageLoaded) return;
+    const rect = mainCanvas.getBoundingClientRect();
+    const scaleX = mainCanvas.width / rect.width;
+    const scaleY = mainCanvas.height / rect.height;
+    const px = Math.floor((e.clientX - rect.left) * scaleX);
+    const py = Math.floor((e.clientY - rect.top)  * scaleY);
+    const { r, g, b, a } = getPixelColor(px, py);
+    const hex = rgbToHex(r, g, b);
+    addToHistory(hex);
+    copyToClipboard(hex);
+    showToast('Copied ' + hex);
+  });
+
+  /* ── Magnifier ── */
+  function drawMagnifier(clientX, clientY, px, py) {
+    magnifier.style.display = 'block';
+    const offset = 20;
+    const mw = MAG_SIZE, mh = MAG_SIZE;
+    let left = clientX + offset;
+    let top  = clientY + offset;
+    if (left + mw > window.innerWidth)  left = clientX - mw - offset;
+    if (top  + mh > window.innerHeight) top  = clientY - mh - offset;
+    magnifier.style.left = left + 'px';
+    magnifier.style.top  = top  + 'px';
+
+    const half = Math.floor(MAG_PIXELS / 2);
+    magCtx.clearRect(0, 0, MAG_SIZE, MAG_SIZE);
+    magCtx.imageSmoothingEnabled = false;
+    magCtx.drawImage(
+      mainCanvas,
+      px - half, py - half, MAG_PIXELS, MAG_PIXELS,
+      0, 0, MAG_SIZE, MAG_SIZE
+    );
+  }
+
+  /* ── History ── */
+  function addToHistory(hex) {
+    if (history.includes(hex)) return;
+    history.unshift(hex);
+    if (history.length > 20) history.pop();
+    renderHistory();
+  }
+
+  function renderHistory() {
+    histGrid.innerHTML = '';
+    const slots = Math.max(history.length, 10);
+    for (let i = 0; i < slots; i++) {
+      const el = document.createElement('div');
+      if (history[i]) {
+        el.className = 'swatch-item';
+        el.style.background = history[i];
+        el.title = history[i];
+        el.addEventListener('click', () => {
+          copyToClipboard(history[i]);
+          showToast('Copied ' + history[i]);
+        });
+      } else {
+        el.className = 'swatch-item swatch-empty';
+      }
+      histGrid.appendChild(el);
+    }
+  }
+
+  document.getElementById('clear-history').addEventListener('click', () => {
+    history = [];
+    renderHistory();
+  });
+
+  renderHistory();
+
+  /* ── Copy helpers ── */
+  function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).catch(() => {});
+  }
+
+  [valHex, valRgb, valHsl].forEach(el => {
+    el.addEventListener('click', () => {
+      if (!currentHex) return;
+      const text = el.textContent;
+      copyToClipboard(text);
+      el.classList.add('copied');
+      setTimeout(() => el.classList.remove('copied'), 800);
+      showToast('Copied!');
+    });
+  });
+
+  document.getElementById('copy-hex-btn').addEventListener('click', () => {
+    if (!currentHex) return;
+    copyToClipboard(currentHex);
+    showToast('Copied ' + currentHex);
+  });
+
+  document.getElementById('copy-all-btn').addEventListener('click', () => {
+    if (!currentHex) return;
+    const text = `HEX: ${currentHex}\nRGB: ${currentRgb}\nHSL: ${currentHsl}`;
+    copyToClipboard(text);
+    showToast('All values copied!');
+  });
+
+  /* ── Toast ── */
+  let toastTimer;
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 1800);
+  }
+</script>
+</body>
+</html>
