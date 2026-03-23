@@ -318,6 +318,8 @@
       font-size: 1rem;
     }
     .action-btn.primary:hover { background: #d4ff80; }
+    .action-btn.danger { border-color: #ff4444; color: #ff4444; }
+    .action-btn.danger:hover { background: rgba(255,68,68,0.1); border-color: #ff6666; color: #ff6666; }
 
     /* Toast */
     #toast {
@@ -421,7 +423,7 @@
     </div>
 
     <div class="panel" style="margin-top: auto;">
-      <button class="action-btn" id="new-image-btn">Load new image</button>
+      <button class="action-btn danger" id="new-image-btn">Clear Image</button>
     </div>
   </aside>
 </main>
@@ -501,7 +503,26 @@
   }
 
   document.getElementById('browse-btn').addEventListener('click', () => fileInput.click());
-  document.getElementById('new-image-btn').addEventListener('click', () => fileInput.click());
+  document.getElementById('new-image-btn').addEventListener('click', () => {
+    ctx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+    canvasWrap.classList.remove('visible');
+    dropZone.classList.remove('hidden');
+    imageLoaded = false;
+    fileInput.value = '';
+    document.getElementById('img-filename').textContent  = '—';
+    document.getElementById('img-filesize').textContent  = '—';
+    document.getElementById('img-dimensions').textContent = '—';
+    document.getElementById('img-type').textContent      = '—';
+    history = [];
+    renderHistory();
+    currentHex = null; currentRgb = null; currentHsl = null;
+    swatch.style.background = '#1e1e2e';
+    valHex.textContent = '#------';
+    valRgb.textContent = '---, ---, ---';
+    valHsl.textContent = '---°, --%, --%';
+    document.getElementById('cx').textContent = '—';
+    document.getElementById('cy').textContent = '—';
+  });
   fileInput.addEventListener('change', e => loadFile(e.target.files[0]));
 
   dropZone.addEventListener('click', () => fileInput.click());
