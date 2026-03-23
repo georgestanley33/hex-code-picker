@@ -376,10 +376,6 @@
           <span class="value-key">HSL</span>
           <span class="value-val" id="val-hsl" title="Click to copy">---°, --%, --%</span>
         </div>
-        <div class="value-row">
-          <span class="value-key">Alpha</span>
-          <span class="value-val" id="val-alpha">---</span>
-        </div>
       </div>
       <div id="coords-display">x: <span id="cx">—</span> &nbsp; y: <span id="cy">—</span></div>
     </div>
@@ -424,7 +420,6 @@
   const valHex      = document.getElementById('val-hex');
   const valRgb      = document.getElementById('val-rgb');
   const valHsl      = document.getElementById('val-hsl');
-  const valAlpha    = document.getElementById('val-alpha');
   const cxEl        = document.getElementById('cx');
   const cyEl        = document.getElementById('cy');
   const histGrid    = document.getElementById('history-grid');
@@ -508,8 +503,6 @@
   function updateSidebar(r, g, b, a) {
     const hex = rgbToHex(r, g, b);
     const hsl = rgbToHsl(r, g, b);
-    const alpha = (a / 255).toFixed(2);
-
     currentHex = hex;
     currentRgb = `rgb(${r}, ${g}, ${b})`;
     currentHsl = `hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`;
@@ -518,7 +511,6 @@
     valHex.textContent  = hex;
     valRgb.textContent  = `${r}, ${g}, ${b}`;
     valHsl.textContent  = `${hsl.h}°, ${hsl.s}%, ${hsl.l}%`;
-    valAlpha.textContent = alpha;
   }
 
   mainCanvas.addEventListener('mousemove', e => {
